@@ -1,0 +1,2093 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FactuPro - Application de Facturation</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <style>
+        :root {
+            --primary-color: #2563eb;
+            --secondary-color: #64748b;
+            --success-color: #10b981;
+            --danger-color: #ef4444;
+            --warning-color: #f59e0b;
+            --dark-color: #1e293b;
+            --light-bg: #87CEEB; /* Bleu ciel */
+            --sidebar-bg: #1e3a8a; /* Bleu foncé pour contraster */
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background-color: var(--light-bg);
+            background-image: 
+                radial-gradient(circle at 20% 80%, rgba(255,255,255,0.3) 0%, transparent 50%),
+                radial-gradient(circle at 80% 20%, rgba(255,255,255,0.3) 0%, transparent 50%);
+            background-attachment: fixed;
+        }
+
+        /* Page de connexion */
+        .login-container {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+
+        .login-card {
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            width: 100%;
+            max-width: 400px;
+            animation: fadeIn 0.5s ease-out;
+        }
+
+        .login-card h2 {
+            color: var(--dark-color);
+            margin-bottom: 30px;
+            text-align: center;
+        }
+
+        .login-card .form-control {
+            border-radius: 10px;
+            padding: 12px 16px;
+            border: 2px solid #e2e8f0;
+            transition: all 0.3s;
+        }
+
+        .login-card .form-control:focus {
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+        }
+
+        .login-card .btn-primary {
+            width: 100%;
+            padding: 12px;
+            border-radius: 10px;
+            font-weight: 600;
+            margin-top: 20px;
+        }
+
+        .sidebar {
+            background-color: var(--sidebar-bg);
+            min-height: 100vh;
+            position: fixed;
+            left: 0;
+            top: 0;
+            width: 250px;
+            z-index: 1000;
+            transition: all 0.3s;
+            box-shadow: 2px 0 10px rgba(0,0,0,0.1);
+        }
+
+        .sidebar.collapsed {
+            width: 70px;
+        }
+
+        .sidebar .nav-link {
+            color: #cbd5e1;
+            padding: 12px 20px;
+            transition: all 0.3s;
+            border-left: 3px solid transparent;
+        }
+
+        .sidebar .nav-link:hover,
+        .sidebar .nav-link.active {
+            color: white;
+            background-color: rgba(255, 255, 255, 0.1);
+            border-left-color: #60a5fa;
+        }
+
+        .sidebar .nav-link.disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .main-content {
+            margin-left: 250px;
+            padding: 20px;
+            transition: all 0.3s;
+        }
+
+        .main-content.expanded {
+            margin-left: 70px;
+        }
+
+        .stat-card {
+            background: white;
+            border-radius: 16px;
+            padding: 28px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+            transition: transform 0.3s, box-shadow 0.3s;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .stat-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12);
+        }
+
+        .stat-icon {
+            width: 56px;
+            height: 56px;
+            border-radius: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 28px;
+        }
+
+        .invoice-card {
+            background: white;
+            border-radius: 16px;
+            padding: 24px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+            transition: all 0.3s;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .invoice-card:hover {
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12);
+            transform: translateY(-2px);
+        }
+
+        .status-badge {
+            padding: 6px 16px;
+            border-radius: 24px;
+            font-size: 13px;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+        }
+
+        .status-paid {
+            background-color: #d1fae5;
+            color: #065f46;
+        }
+
+        .status-pending {
+            background-color: #fef3c7;
+            color: #92400e;
+        }
+
+        .status-overdue {
+            background-color: #fee2e2;
+            color: #991b1b;
+        }
+
+        .btn-primary {
+            background-color: var(--primary-color);
+            border-color: var(--primary-color);
+            border-radius: 10px;
+            padding: 10px 20px;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+
+        .btn-primary:hover {
+            background-color: #1d4ed8;
+            border-color: #1d4ed8;
+            transform: translateY(-2px);
+        }
+
+        .modal-content {
+            border-radius: 16px;
+            border: none;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+        }
+
+        .form-control, .form-select {
+            border-radius: 10px;
+            border: 2px solid #e2e8f0;
+            padding: 12px 16px;
+            transition: all 0.3s;
+        }
+
+        .form-control:focus, .form-select:focus {
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+        }
+
+        .table {
+            background: white;
+            border-radius: 16px;
+            overflow: hidden;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+        }
+
+        .table thead th {
+            background-color: #f8fafc;
+            border: none;
+            color: var(--dark-color);
+            font-weight: 700;
+            padding: 20px;
+            text-transform: uppercase;
+            font-size: 12px;
+            letter-spacing: 1px;
+        }
+
+        .table tbody td {
+            padding: 20px;
+            vertical-align: middle;
+        }
+
+        .navbar {
+            background-color: white;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+            border-radius: 0 0 20px 20px;
+        }
+
+        .toggle-sidebar {
+            cursor: pointer;
+            font-size: 20px;
+            color: var(--dark-color);
+            transition: transform 0.3s;
+        }
+
+        .toggle-sidebar:hover {
+            transform: scale(1.1);
+        }
+
+        .invoice-preview {
+            background: white;
+            border-radius: 16px;
+            padding: 50px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+        }
+
+        .invoice-header {
+            border-bottom: 3px solid #e2e8f0;
+            padding-bottom: 30px;
+            margin-bottom: 40px;
+        }
+
+        .invoice-total {
+            background-color: #f8fafc;
+            padding: 30px;
+            border-radius: 12px;
+            margin-top: 30px;
+            border: 2px solid #e2e8f0;
+        }
+
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            padding: 15px 20px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            margin: 20px;
+            color: white;
+        }
+
+        .user-info img {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            border: 2px solid white;
+        }
+
+        @media (max-width: 768px) {
+            .sidebar {
+                width: 70px;
+            }
+            
+            .sidebar .nav-link span {
+                display: none;
+            }
+            
+            .main-content {
+                margin-left: 70px;
+            }
+        }
+
+        .fade-in {
+            animation: fadeIn 0.5s ease-in;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .currency-display {
+            font-weight: 700;
+            color: #1e293b;
+        }
+
+        .logo {
+            font-size: 24px;
+            font-weight: 800;
+            color: white;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .sidebar-title {
+            padding: 20px;
+            text-align: center;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .access-denied {
+            text-align: center;
+            padding: 60px 20px;
+        }
+
+        .access-denied i {
+            font-size: 64px;
+            color: #ef4444;
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+    <!-- Page de connexion -->
+    <div id="loginPage" class="login-container">
+        <div class="login-card">
+            <h2><i class="fas fa-file-invoice-dollar me-2"></i>FactuPro</h2>
+            <form id="loginForm">
+                <div class="mb-3">
+                    <label for="accessCode" class="form-label">Code d'accès</label>
+                    <input type="password" class="form-control" id="accessCode" placeholder="Entrez votre code d'accès" required>
+                </div>
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-sign-in-alt me-2"></i>Se connecter
+                </button>
+                <div class="text-center mt-3">
+                    <small class="text-muted">Code par défaut: 1234</small>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Application principale -->
+    <div id="appContainer" style="display: none;">
+        <!-- Sidebar -->
+        <nav class="sidebar" id="sidebar">
+            <div class="sidebar-title">
+                <h4 class="logo">
+                    <i class="fas fa-file-invoice-dollar me-2"></i>
+                    <span>FactuPro</span>
+                </h4>
+            </div>
+            <div class="user-info">
+                <img src="https://picsum.photos/seed/user/40/40.jpg" alt="User">
+                <div>
+                    <div class="fw-bold" id="currentUser">Utilisateur</div>
+                    <small id="currentUserRole">Connecté</small>
+                </div>
+            </div>
+            <ul class="nav flex-column px-3">
+                <li class="nav-item">
+                    <a class="nav-link active" href="#" onclick="showSection('dashboard')">
+                        <i class="fas fa-tachometer-alt me-3"></i>
+                        <span>Tableau de bord</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="#" onclick="showSection('invoices')">
+                        <i class="fas fa-file-invoice me-3"></i>
+                        <span>Factures</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="#" onclick="showSection('clients')">
+                        <i class="fas fa-users me-3"></i>
+                        <span>Clients</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="#" onclick="showSection('products')">
+                        <i class="fas fa-box me-3"></i>
+                        <span>Produits</span>
+                    </a>
+                </li>
+                <li class="nav-item" id="usersNav" style="display: none;">
+                    <a class="nav-link" href="#" onclick="showSection('users')">
+                        <i class="fas fa-user-shield me-3"></i>
+                        <span>Utilisateurs</span>
+                    </a>
+                </li>
+                <li class="nav-item" id="settingsNav" style="display: none;">
+                    <a class="nav-link" href="#" onclick="showSection('settings')">
+                        <i class="fas fa-cog me-3"></i>
+                        <span>Paramètres</span>
+                    </a>
+                </li>
+                <li class="nav-item mt-auto">
+                    <a class="nav-link" href="#" onclick="logout()">
+                        <i class="fas fa-sign-out-alt me-3"></i>
+                        <span>Déconnexion</span>
+                    </a>
+                </li>
+            </ul>
+        </nav>
+
+        <!-- Main Content -->
+        <div class="main-content" id="mainContent">
+            <!-- Navbar -->
+            <nav class="navbar navbar-expand-lg mb-4">
+                <div class="container-fluid">
+                    <i class="fas fa-bars toggle-sidebar me-3" onclick="toggleSidebar()"></i>
+                    <div class="ms-auto d-flex align-items-center">
+                        <div class="dropdown">
+                            <button class="btn btn-light rounded-circle" type="button" data-bs-toggle="dropdown">
+                                <i class="fas fa-bell text-muted"></i>
+                                <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">3</span>
+                            </button>
+                            <ul class="dropdown-menu dropdown-menu-end">
+                                <li><a class="dropdown-item" href="#">Nouvelle facture créée</a></li>
+                                <li><a class="dropdown-item" href="#">Paiement reçu</a></li>
+                                <li><a class="dropdown-item" href="#">Facture en retard</a></li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </nav>
+
+            <!-- Dashboard Section -->
+            <div id="dashboard" class="section fade-in">
+                <h2 class="mb-4">Tableau de bord</h2>
+                
+                <!-- Stats Cards -->
+                <div class="row mb-4">
+                    <div class="col-md-3 mb-3">
+                        <div class="stat-card">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <h6 class="text-muted mb-2">Total Factures</h6>
+                                    <h3 class="mb-0 currency-display" id="totalInvoices">0</h3>
+                                    <small class="text-success"><i class="fas fa-arrow-up"></i> 12%</small>
+                                </div>
+                                <div class="stat-icon bg-primary bg-opacity-10 text-primary">
+                                    <i class="fas fa-file-invoice"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <div class="stat-card">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <h6 class="text-muted mb-2">Revenus</h6>
+                                    <h3 class="mb-0 currency-display" id="totalRevenue">0</h3>
+                                    <small class="text-success"><i class="fas fa-arrow-up"></i> 8%</small>
+                                </div>
+                                <div class="stat-icon bg-success bg-opacity-10 text-success">
+                                    <i class="fas fa-coins"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <div class="stat-card">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <h6 class="text-muted mb-2">Clients</h6>
+                                    <h3 class="mb-0 currency-display" id="totalClients">0</h3>
+                                    <small class="text-success"><i class="fas fa-arrow-up"></i> 5%</small>
+                                </div>
+                                <div class="stat-icon bg-warning bg-opacity-10 text-warning">
+                                    <i class="fas fa-users"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <div class="stat-card">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <h6 class="text-muted mb-2">En attente</h6>
+                                    <h3 class="mb-0 currency-display" id="pendingInvoices">0</h3>
+                                    <small class="text-danger"><i class="fas fa-arrow-up"></i> 2%</small>
+                                </div>
+                                <div class="stat-icon bg-danger bg-opacity-10 text-danger">
+                                    <i class="fas fa-clock"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Recent Invoices -->
+                <div class="row">
+                    <div class="col-md-8">
+                        <div class="card border-0 shadow-sm">
+                            <div class="card-header bg-white border-0 py-3">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <h5 class="mb-0">Factures récentes</h5>
+                                    <a href="#" onclick="showSection('invoices')" class="text-primary text-decoration-none">Voir tout</a>
+                                </div>
+                            </div>
+                            <div class="card-body p-0">
+                                <div id="recentInvoicesList"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="card border-0 shadow-sm">
+                            <div class="card-header bg-white border-0 py-3">
+                                <h5 class="mb-0">Actions rapides</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="d-grid gap-2">
+                                    <button class="btn btn-primary" onclick="openNewInvoiceModal()">
+                                        <i class="fas fa-plus me-2"></i>Nouvelle facture
+                                    </button>
+                                    <button class="btn btn-outline-primary" onclick="showSection('clients')">
+                                        <i class="fas fa-user-plus me-2"></i>Ajouter un client
+                                    </button>
+                                    <button class="btn btn-outline-primary" onclick="showSection('products')">
+                                        <i class="fas fa-box me-2"></i>Ajouter un produit
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Invoices Section -->
+            <div id="invoices" class="section fade-in" style="display: none;">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h2>Factures</h2>
+                    <button class="btn btn-primary" onclick="openNewInvoiceModal()">
+                        <i class="fas fa-plus me-2"></i>Nouvelle facture
+                    </button>
+                </div>
+
+                <!-- Search and Filter -->
+                <div class="card border-0 shadow-sm mb-4">
+                    <div class="card-body">
+                        <div class="row g-3">
+                            <div class="col-md-4">
+                                <input type="text" class="form-control" placeholder="Rechercher une facture..." id="searchInvoice">
+                            </div>
+                            <div class="col-md-3">
+                                <select class="form-select" id="filterStatus">
+                                    <option value="">Tous les statuts</option>
+                                    <option value="paid">Payée</option>
+                                    <option value="pending">En attente</option>
+                                    <option value="overdue">En retard</option>
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <input type="date" class="form-control" id="filterDate">
+                            </div>
+                            <div class="col-md-2">
+                                <button class="btn btn-outline-primary w-100" onclick="filterInvoices()">
+                                    <i class="fas fa-filter me-2"></i>Filtrer
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Invoices Table -->
+                <div class="card border-0 shadow-sm">
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead>
+                                <tr>
+                                    <th>N° Facture</th>
+                                    <th>Client</th>
+                                    <th>Date</th>
+                                    <th>Échéance</th>
+                                    <th>Montant</th>
+                                    <th>Statut</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="invoicesTableBody">
+                                <!-- Invoices will be dynamically added here -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Clients Section -->
+            <div id="clients" class="section fade-in" style="display: none;">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h2>Clients</h2>
+                    <button class="btn btn-primary" onclick="openNewClientModal()">
+                        <i class="fas fa-plus me-2"></i>Nouveau client
+                    </button>
+                </div>
+
+                <div class="card border-0 shadow-sm">
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead>
+                                <tr>
+                                    <th>Nom</th>
+                                    <th>Email</th>
+                                    <th>Téléphone</th>
+                                    <th>Adresse</th>
+                                    <th>Factures</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="clientsTableBody">
+                                <!-- Clients will be dynamically added here -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Products Section -->
+            <div id="products" class="section fade-in" style="display: none;">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h2>Produits/Services</h2>
+                    <button class="btn btn-primary" onclick="openNewProductModal()">
+                        <i class="fas fa-plus me-2"></i>Nouveau produit
+                    </button>
+                </div>
+
+                <div class="card border-0 shadow-sm">
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead>
+                                <tr>
+                                    <th>Nom</th>
+                                    <th>Description</th>
+                                    <th>Prix unitaire</th>
+                                    <th>TVA</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="productsTableBody">
+                                <!-- Products will be dynamically added here -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Users Section -->
+            <div id="users" class="section fade-in" style="display: none;">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h2>Gestion des utilisateurs</h2>
+                    <button class="btn btn-primary" onclick="openNewUserModal()">
+                        <i class="fas fa-plus me-2"></i>Nouvel utilisateur
+                    </button>
+                </div>
+
+                <div class="card border-0 shadow-sm">
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead>
+                                <tr>
+                                    <th>Nom</th>
+                                    <th>Code d'accès</th>
+                                    <th>Rôle</th>
+                                    <th>Date de création</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="usersTableBody">
+                                <!-- Users will be dynamically added here -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Settings Section -->
+            <div id="settings" class="section fade-in" style="display: none;">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h2>Paramètres</h2>
+                </div>
+                
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="card border-0 shadow-sm">
+                            <div class="card-header bg-white border-0 py-3">
+                                <h5 class="mb-0">Informations de l'entreprise</h5>
+                            </div>
+                            <div class="card-body">
+                                <form id="companySettingsForm">
+                                    <div class="mb-3">
+                                        <label class="form-label">Nom de l'entreprise</label>
+                                        <input type="text" class="form-control" id="companyName" value="Ma Société SARL">
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label">Adresse</label>
+                                        <textarea class="form-control" id="companyAddress" rows="3">123 Rue de la République
+Alger, Algérie</textarea>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label">N° Registre de commerce</label>
+                                        <input type="text" class="form-control" id="companyRC" value="12345678901234">
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label">Email</label>
+                                        <input type="email" class="form-control" id="companyEmail" value="contact@masociete.dz">
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label">Téléphone</label>
+                                        <input type="tel" class="form-control" id="companyPhone" value="+213 21 23 45 67">
+                                    </div>
+                                    <button type="submit" class="btn btn-primary">Enregistrer</button>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="card border-0 shadow-sm">
+                            <div class="card-header bg-white border-0 py-3">
+                                <h5 class="mb-0">Préférences de facturation</h5>
+                            </div>
+                            <div class="card-body">
+                                <form id="invoiceSettingsForm">
+                                    <div class="mb-3">
+                                        <label class="form-label">Devise</label>
+                                        <select class="form-select" id="currency">
+                                            <option value="DZD">Dinar Algérien (DZD)</option>
+                                            <option value="EUR">Euro (€)</option>
+                                            <option value="USD">Dollar ($)</option>
+                                        </select>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label">TVA par défaut (%)</label>
+                                        <input type="number" class="form-control" id="defaultVat" value="19" min="0" max="100">
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label">Conditions de paiement</label>
+                                        <select class="form-select" id="paymentTerms">
+                                            <option value="0">Paiement immédiat</option>
+                                            <option value="7">7 jours</option>
+                                            <option value="15">15 jours</option>
+                                            <option value="30" selected>30 jours</option>
+                                            <option value="60">60 jours</option>
+                                        </select>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label">Numérotation des factures</label>
+                                        <input type="text" class="form-control" id="invoicePrefix" value="FAC-{YYYY}-{MM}-{NNN}" placeholder="Ex: FAC-2024-01-001">
+                                    </div>
+                                    <button type="submit" class="btn btn-primary">Enregistrer</button>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Access Denied Section -->
+            <div id="accessDenied" class="section fade-in" style="display: none;">
+                <div class="access-denied">
+                    <i class="fas fa-lock"></i>
+                    <h2>Accès refusé</h2>
+                    <p>Vous n'avez pas les permissions nécessaires pour accéder à cette section.</p>
+                    <button class="btn btn-primary" onclick="showSection('dashboard')">
+                        <i class="fas fa-arrow-left me-2"></i>Retour au tableau de bord
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- New Invoice Modal -->
+    <div class="modal fade" id="newInvoiceModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Nouvelle facture</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="newInvoiceForm">
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label">Client</label>
+                                <select class="form-select" id="invoiceClient" required>
+                                    <option value="">Sélectionner un client</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Date d'échéance</label>
+                                <input type="date" class="form-control" id="invoiceDueDate" required>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Produits/Services</label>
+                            <div id="invoiceItems">
+                                <div class="invoice-item row mb-2">
+                                    <div class="col-md-5">
+                                        <select class="form-select product-select" required>
+                                            <option value="">Sélectionner un produit</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-2">
+                                        <input type="number" class="form-control quantity" placeholder="Qté" min="1" value="1" required>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <input type="number" class="form-control price" placeholder="Prix" step="0.01" required>
+                                    </div>
+                                    <div class="col-md-2">
+                                        <button type="button" class="btn btn-danger btn-sm" onclick="removeInvoiceItem(this)">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                            <button type="button" class="btn btn-outline-primary btn-sm mt-2" onclick="addInvoiceItem()">
+                                <i class="fas fa-plus me-1"></i>Ajouter une ligne
+                            </button>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Notes</label>
+                            <textarea class="form-control" id="invoiceNotes" rows="3" placeholder="Notes supplémentaires..."></textarea>
+                        </div>
+
+                        <div class="invoice-total">
+                            <div class="row">
+                                <div class="col-md-6 offset-md-6">
+                                    <div class="d-flex justify-content-between mb-2">
+                                        <span>Sous-total:</span>
+                                        <span id="subtotal">0.00</span>
+                                    </div>
+                                    <div class="d-flex justify-content-between mb-2">
+                                        <span>TVA (<span id="vatRate">19</span>%):</span>
+                                        <span id="vat">0.00</span>
+                                    </div>
+                                    <div class="d-flex justify-content-between">
+                                        <strong>Total:</strong>
+                                        <strong id="total">0.00</strong>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                    <button type="button" class="btn btn-primary" onclick="saveInvoice()">Enregistrer la facture</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- New Client Modal -->
+    <div class="modal fade" id="newClientModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Nouveau client</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="newClientForm">
+                        <div class="mb-3">
+                            <label class="form-label">Nom</label>
+                            <input type="text" class="form-control" id="clientName" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Email</label>
+                            <input type="email" class="form-control" id="clientEmail" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Téléphone</label>
+                            <input type="tel" class="form-control" id="clientPhone">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Adresse</label>
+                            <textarea class="form-control" id="clientAddress" rows="3"></textarea>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                    <button type="button" class="btn btn-primary" onclick="saveClient()">Enregistrer</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- New Product Modal -->
+    <div class="modal fade" id="newProductModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Nouveau produit/service</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="newProductForm">
+                        <div class="mb-3">
+                            <label class="form-label">Nom</label>
+                            <input type="text" class="form-control" id="productName" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Description</label>
+                            <textarea class="form-control" id="productDescription" rows="2"></textarea>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Prix unitaire</label>
+                            <input type="number" class="form-control" id="productPrice" step="0.01" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">TVA (%)</label>
+                            <input type="number" class="form-control" id="productVat" value="19" min="0" max="100">
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                    <button type="button" class="btn btn-primary" onclick="saveProduct()">Enregistrer</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- New User Modal -->
+    <div class="modal fade" id="newUserModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Nouvel utilisateur</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="newUserForm">
+                        <div class="mb-3">
+                            <label class="form-label">Nom</label>
+                            <input type="text" class="form-control" id="userName" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Code d'accès</label>
+                            <input type="password" class="form-control" id="userCode" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Rôle</label>
+                            <select class="form-select" id="userRole">
+                                <option value="admin">Administrateur</option>
+                                <option value="user">Utilisateur</option>
+                                <option value="viewer">Consultant</option>
+                            </select>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                    <button type="button" class="btn btn-primary" onclick="saveUser()">Enregistrer</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Invoice Preview Modal -->
+    <div class="modal fade" id="invoicePreviewModal" tabindex="-1">
+        <div class="modal-dialog modal-xl">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Aperçu de la facture</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div id="invoicePreviewContent"></div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fermer</button>
+                    <button type="button" class="btn btn-primary" onclick="downloadPDF()">
+                        <i class="fas fa-download me-2"></i>Télécharger PDF
+                    </button>
+                    <button type="button" class="btn btn-success" onclick="sendInvoice()">
+                        <i class="fas fa-paper-plane me-2"></i>Envoyer par email
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Data Storage
+        let invoices = JSON.parse(localStorage.getItem('invoices')) || [];
+        let clients = JSON.parse(localStorage.getItem('clients')) || [
+            { id: 1, name: 'Ahmed Benali', email: 'ahmed.benali@email.com', phone: '+213 21 23 45 67', address: '123 Rue Didouche Mourad, Alger' },
+            { id: 2, name: 'Fatima Zohra', email: 'fatima.zohra@email.com', phone: '+213 21 34 56 78', address: '456 Avenue Pasteur, Oran' }
+        ];
+        let products = JSON.parse(localStorage.getItem('products')) || [
+            { id: 1, name: 'Développement web', description: 'Site web responsive', price: 150000, vat: 19 },
+            { id: 2, name: 'Maintenance mensuelle', description: 'Support technique', price: 20000, vat: 19 },
+            { id: 3, name: 'Hébergement', description: 'Serveur web 1 an', price: 12000, vat: 19 }
+        ];
+        let users = JSON.parse(localStorage.getItem('users')) || [
+            { id: 1, name: 'Admin', code: '1234', role: 'admin', createdAt: new Date().toISOString() }
+        ];
+        let companyInfo = JSON.parse(localStorage.getItem('companyInfo')) || {
+            name: 'Ma Société SARL',
+            address: '123 Rue de la République\nAlger, Algérie',
+            rc: '12345678901234',
+            email: 'contact@masociete.dz',
+            phone: '+213 21 23 45 67',
+            currency: 'DZD',
+            vatRate: 19
+        };
+        let currentUser = null;
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            // Check if user is already logged in
+            const savedUser = sessionStorage.getItem('currentUser');
+            if (savedUser) {
+                currentUser = JSON.parse(savedUser);
+                showApp();
+            } else {
+                showLogin();
+            }
+
+            // Login form handler
+            document.getElementById('loginForm').addEventListener('submit', function(e) {
+                e.preventDefault();
+                const code = document.getElementById('accessCode').value;
+                const user = users.find(u => u.code === code);
+                
+                if (user) {
+                    currentUser = user;
+                    sessionStorage.setItem('currentUser', JSON.stringify(user));
+                    showApp();
+                } else {
+                    alert('Code d\'accès invalide!');
+                }
+            });
+        });
+
+        function showLogin() {
+            document.getElementById('loginPage').style.display = 'flex';
+            document.getElementById('appContainer').style.display = 'none';
+        }
+
+        function showApp() {
+            document.getElementById('loginPage').style.display = 'none';
+            document.getElementById('appContainer').style.display = 'block';
+            
+            // Update user info
+            document.getElementById('currentUser').textContent = currentUser.name;
+            document.getElementById('currentUserRole').textContent = getRoleText(currentUser.role);
+            
+            // Show/hide admin sections
+            if (currentUser.role === 'admin') {
+                document.getElementById('usersNav').style.display = 'block';
+                document.getElementById('settingsNav').style.display = 'block';
+            } else {
+                document.getElementById('usersNav').style.display = 'none';
+                document.getElementById('settingsNav').style.display = 'none';
+            }
+            
+            // Initialize app
+            updateDashboard();
+            updateClientsTable();
+            updateProductsTable();
+            updateUsersTable();
+            updateInvoicesTable();
+            updateRecentInvoices();
+            
+            // Set default due date (30 days from now)
+            const dueDate = new Date();
+            dueDate.setDate(dueDate.getDate() + 30);
+            document.getElementById('invoiceDueDate').value = dueDate.toISOString().split('T')[0];
+        }
+
+        function logout() {
+            sessionStorage.removeItem('currentUser');
+            currentUser = null;
+            showLogin();
+        }
+
+        // Sidebar Toggle
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            const mainContent = document.getElementById('mainContent');
+            sidebar.classList.toggle('collapsed');
+            mainContent.classList.toggle('expanded');
+        }
+
+        // Section Navigation
+        function showSection(sectionId) {
+            // Check permissions
+            if ((sectionId === 'settings' || sectionId === 'users') && currentUser.role !== 'admin') {
+                document.querySelectorAll('.section').forEach(section => {
+                    section.style.display = 'none';
+                });
+                document.getElementById('accessDenied').style.display = 'block';
+                return;
+            }
+            
+            // Hide all sections
+            document.querySelectorAll('.section').forEach(section => {
+                section.style.display = 'none';
+            });
+            
+            // Show selected section
+            document.getElementById(sectionId).style.display = 'block';
+            
+            // Update active nav link
+            document.querySelectorAll('.nav-link').forEach(link => {
+                link.classList.remove('active');
+            });
+            event.target.closest('.nav-link').classList.add('active');
+            
+            // Update tables if needed
+            if (sectionId === 'invoices') {
+                updateInvoicesTable();
+            } else if (sectionId === 'clients') {
+                updateClientsTable();
+            } else if (sectionId === 'products') {
+                updateProductsTable();
+            } else if (sectionId === 'users') {
+                updateUsersTable();
+            }
+        }
+
+        // Dashboard Functions
+        function updateDashboard() {
+            document.getElementById('totalInvoices').textContent = invoices.length;
+            document.getElementById('totalRevenue').textContent = formatCurrency(calculateTotalRevenue());
+            document.getElementById('totalClients').textContent = clients.length;
+            document.getElementById('pendingInvoices').textContent = invoices.filter(inv => inv.status === 'pending').length;
+        }
+
+        function calculateTotalRevenue() {
+            return invoices
+                .filter(inv => inv.status === 'paid')
+                .reduce((sum, inv) => sum + inv.total, 0);
+        }
+
+        function updateRecentInvoices() {
+            const recentInvoices = invoices.slice(-5).reverse();
+            const container = document.getElementById('recentInvoicesList');
+            
+            if (recentInvoices.length === 0) {
+                container.innerHTML = '<div class="p-4 text-center text-muted">Aucune facture récente</div>';
+                return;
+            }
+            
+            container.innerHTML = recentInvoices.map(invoice => `
+                <div class="invoice-card">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="mb-1">Facture #${invoice.number}</h6>
+                            <small class="text-muted">${getClientName(invoice.clientId)} • ${formatDate(invoice.date)}</small>
+                        </div>
+                        <div class="text-end">
+                            <div class="fw-bold currency-display">${formatCurrency(invoice.total)}</div>
+                            <span class="status-badge status-${invoice.status}">${getStatusText(invoice.status)}</span>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // Invoice Functions
+        function openNewInvoiceModal() {
+            // Update client and product selects
+            updateClientSelect();
+            updateProductSelects();
+            
+            // Reset form
+            document.getElementById('newInvoiceForm').reset();
+            document.getElementById('invoiceItems').innerHTML = getInvoiceItemHTML();
+            
+            // Set default due date
+            const dueDate = new Date();
+            dueDate.setDate(dueDate.getDate() + 30);
+            document.getElementById('invoiceDueDate').value = dueDate.toISOString().split('T')[0];
+            
+            // Update VAT rate display
+            document.getElementById('vatRate').textContent = companyInfo.vatRate;
+            
+            // Show modal
+            const modal = new bootstrap.Modal(document.getElementById('newInvoiceModal'));
+            modal.show();
+        }
+
+        function updateClientSelect() {
+            const select = document.getElementById('invoiceClient');
+            select.innerHTML = '<option value="">Sélectionner un client</option>' +
+                clients.map(client => `<option value="${client.id}">${client.name}</option>`).join('');
+        }
+
+        function updateProductSelects() {
+            const productOptions = '<option value="">Sélectionner un produit</option>' +
+                products.map(product => `<option value="${product.id}" data-price="${product.price}">${product.name} - ${formatCurrency(product.price)}</option>`).join('');
+            
+            document.querySelectorAll('.product-select').forEach(select => {
+                select.innerHTML = productOptions;
+            });
+        }
+
+        function getInvoiceItemHTML() {
+            return `
+                <div class="invoice-item row mb-2">
+                    <div class="col-md-5">
+                        <select class="form-select product-select" required>
+                            <option value="">Sélectionner un produit</option>
+                            ${products.map(product => `<option value="${product.id}" data-price="${product.price}">${product.name} - ${formatCurrency(product.price)}</option>`).join('')}
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <input type="number" class="form-control quantity" placeholder="Qté" min="1" value="1" required>
+                    </div>
+                    <div class="col-md-3">
+                        <input type="number" class="form-control price" placeholder="Prix" step="0.01" required>
+                    </div>
+                    <div class="col-md-2">
+                        <button type="button" class="btn btn-danger btn-sm" onclick="removeInvoiceItem(this)">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                </div>
+            `;
+        }
+
+        function addInvoiceItem() {
+            const container = document.getElementById('invoiceItems');
+            const newItem = document.createElement('div');
+            newItem.innerHTML = getInvoiceItemHTML();
+            container.appendChild(newItem.firstElementChild);
+            
+            // Add event listener to new product select
+            newItem.querySelector('.product-select').addEventListener('change', function() {
+                const selectedOption = this.options[this.selectedIndex];
+                const price = selectedOption.getAttribute('data-price');
+                if (price) {
+                    this.closest('.invoice-item').querySelector('.price').value = price;
+                    calculateInvoiceTotal();
+                }
+            });
+        }
+
+        function removeInvoiceItem(button) {
+            const items = document.querySelectorAll('.invoice-item');
+            if (items.length > 1) {
+                button.closest('.invoice-item').remove();
+                calculateInvoiceTotal();
+            }
+        }
+
+        // Product select change event
+        document.addEventListener('change', function(e) {
+            if (e.target.classList.contains('product-select')) {
+                const selectedOption = e.target.options[e.target.selectedIndex];
+                const price = selectedOption.getAttribute('data-price');
+                if (price) {
+                    e.target.closest('.invoice-item').querySelector('.price').value = price;
+                    calculateInvoiceTotal();
+                }
+            }
+            
+            if (e.target.classList.contains('quantity') || e.target.classList.contains('price')) {
+                calculateInvoiceTotal();
+            }
+        });
+
+        function calculateInvoiceTotal() {
+            let subtotal = 0;
+            const items = document.querySelectorAll('.invoice-item');
+            
+            items.forEach(item => {
+                const quantity = parseFloat(item.querySelector('.quantity').value) || 0;
+                const price = parseFloat(item.querySelector('.price').value) || 0;
+                subtotal += quantity * price;
+            });
+            
+            const vatRate = companyInfo.vatRate / 100;
+            const vat = subtotal * vatRate;
+            const total = subtotal + vat;
+            
+            document.getElementById('subtotal').textContent = formatCurrency(subtotal);
+            document.getElementById('vat').textContent = formatCurrency(vat);
+            document.getElementById('total').textContent = formatCurrency(total);
+        }
+
+        function saveInvoice() {
+            const clientId = parseInt(document.getElementById('invoiceClient').value);
+            const dueDate = document.getElementById('invoiceDueDate').value;
+            const notes = document.getElementById('invoiceNotes').value;
+            
+            if (!clientId || !dueDate) {
+                alert('Veuillez remplir tous les champs obligatoires');
+                return;
+            }
+            
+            const items = [];
+            const itemElements = document.querySelectorAll('.invoice-item');
+            
+            itemElements.forEach(item => {
+                const productId = parseInt(item.querySelector('.product-select').value);
+                const quantity = parseFloat(item.querySelector('.quantity').value);
+                const price = parseFloat(item.querySelector('.price').value);
+                
+                if (productId && quantity && price) {
+                    items.push({
+                        productId: productId,
+                        quantity: quantity,
+                        price: price
+                    });
+                }
+            });
+            
+            if (items.length === 0) {
+                alert('Veuillez ajouter au moins un produit');
+                return;
+            }
+            
+            const vatRate = companyInfo.vatRate / 100;
+            const invoice = {
+                id: Date.now(),
+                number: generateInvoiceNumber(),
+                clientId: clientId,
+                date: new Date().toISOString().split('T')[0],
+                dueDate: dueDate,
+                items: items,
+                notes: notes,
+                status: 'pending',
+                subtotal: items.reduce((sum, item) => sum + (item.quantity * item.price), 0),
+                vat: items.reduce((sum, item) => sum + (item.quantity * item.price), 0) * vatRate,
+                total: items.reduce((sum, item) => sum + (item.quantity * item.price), 0) * (1 + vatRate)
+            };
+            
+            invoices.push(invoice);
+            localStorage.setItem('invoices', JSON.stringify(invoices));
+            
+            // Close modal
+            bootstrap.Modal.getInstance(document.getElementById('newInvoiceModal')).hide();
+            
+            // Update displays
+            updateDashboard();
+            updateInvoicesTable();
+            updateRecentInvoices();
+            
+            // Show preview
+            previewInvoice(invoice.id);
+        }
+
+        function generateInvoiceNumber() {
+            const date = new Date();
+            const year = date.getFullYear();
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const sequence = String(invoices.length + 1).padStart(3, '0');
+            return `FAC-${year}-${month}-${sequence}`;
+        }
+
+        function updateInvoicesTable() {
+            const tbody = document.getElementById('invoicesTableBody');
+            
+            if (invoices.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="7" class="text-center py-4">Aucune facture</td></tr>';
+                return;
+            }
+            
+            tbody.innerHTML = invoices.map(invoice => `
+                <tr>
+                    <td>#${invoice.number}</td>
+                    <td>${getClientName(invoice.clientId)}</td>
+                    <td>${formatDate(invoice.date)}</td>
+                    <td>${formatDate(invoice.dueDate)}</td>
+                    <td class="currency-display">${formatCurrency(invoice.total)}</td>
+                    <td><span class="status-badge status-${invoice.status}">${getStatusText(invoice.status)}</span></td>
+                    <td>
+                        <div class="btn-group btn-group-sm">
+                            <button class="btn btn-outline-primary" onclick="previewInvoice(${invoice.id})" title="Voir">
+                                <i class="fas fa-eye"></i>
+                            </button>
+                            <button class="btn btn-outline-success" onclick="markAsPaid(${invoice.id})" title="Marquer payée">
+                                <i class="fas fa-check"></i>
+                            </button>
+                            <button class="btn btn-outline-danger" onclick="deleteInvoice(${invoice.id})" title="Supprimer">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        function filterInvoices() {
+            const searchTerm = document.getElementById('searchInvoice').value.toLowerCase();
+            const statusFilter = document.getElementById('filterStatus').value;
+            const dateFilter = document.getElementById('filterDate').value;
+            
+            const filteredInvoices = invoices.filter(invoice => {
+                const matchesSearch = invoice.number.toLowerCase().includes(searchTerm) ||
+                                    getClientName(invoice.clientId).toLowerCase().includes(searchTerm);
+                const matchesStatus = !statusFilter || invoice.status === statusFilter;
+                const matchesDate = !dateFilter || invoice.date === dateFilter;
+                
+                return matchesSearch && matchesStatus && matchesDate;
+            });
+            
+            const tbody = document.getElementById('invoicesTableBody');
+            tbody.innerHTML = filteredInvoices.map(invoice => `
+                <tr>
+                    <td>#${invoice.number}</td>
+                    <td>${getClientName(invoice.clientId)}</td>
+                    <td>${formatDate(invoice.date)}</td>
+                    <td>${formatDate(invoice.dueDate)}</td>
+                    <td class="currency-display">${formatCurrency(invoice.total)}</td>
+                    <td><span class="status-badge status-${invoice.status}">${getStatusText(invoice.status)}</span></td>
+                    <td>
+                        <div class="btn-group btn-group-sm">
+                            <button class="btn btn-outline-primary" onclick="previewInvoice(${invoice.id})" title="Voir">
+                                <i class="fas fa-eye"></i>
+                            </button>
+                            <button class="btn btn-outline-success" onclick="markAsPaid(${invoice.id})" title="Marquer payée">
+                                <i class="fas fa-check"></i>
+                            </button>
+                            <button class="btn btn-outline-danger" onclick="deleteInvoice(${invoice.id})" title="Supprimer">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        function previewInvoice(invoiceId) {
+            const invoice = invoices.find(inv => inv.id === invoiceId);
+            if (!invoice) return;
+            
+            const client = clients.find(c => c.id === invoice.clientId);
+            if (!client) return;
+            
+            const previewContent = document.getElementById('invoicePreviewContent');
+            previewContent.innerHTML = `
+                <div class="invoice-preview" id="invoiceToPrint">
+                    <div class="invoice-header">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <h3>${companyInfo.name}</h3>
+                                <p class="mb-0">${companyInfo.address.replace(/\n/g, '<br>')}</p>
+                                <p class="mb-0">RC: ${companyInfo.rc}</p>
+                                <p class="mb-0">${companyInfo.email}</p>
+                                <p class="mb-0">${companyInfo.phone}</p>
+                            </div>
+                            <div class="col-md-6 text-end">
+                                <h2>FACTURE</h2>
+                                <h4>#${invoice.number}</h4>
+                                <p class="mb-1"><strong>Date:</strong> ${formatDate(invoice.date)}</p>
+                                <p class="mb-1"><strong>Échéance:</strong> ${formatDate(invoice.dueDate)}</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="row mb-4">
+                        <div class="col-md-6">
+                            <h5>Facturé à:</h5>
+                            <p class="mb-0"><strong>${client.name}</strong></p>
+                            <p class="mb-0">${client.address.replace(/\n/g, '<br>')}</p>
+                            <p class="mb-0">${client.email}</p>
+                            <p class="mb-0">${client.phone}</p>
+                        </div>
+                    </div>
+                    
+                    <table class="table table-bordered">
+                        <thead>
+                            <tr>
+                                <th>Description</th>
+                                <th class="text-center">Quantité</th>
+                                <th class="text-end">Prix unitaire</th>
+                                <th class="text-end">Total</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${invoice.items.map(item => {
+                                const product = products.find(p => p.id === item.productId);
+                                return `
+                                    <tr>
+                                        <td>${product ? product.name : 'Produit inconnu'}</td>
+                                        <td class="text-center">${item.quantity}</td>
+                                        <td class="text-end">${formatCurrency(item.price)}</td>
+                                        <td class="text-end">${formatCurrency(item.quantity * item.price)}</td>
+                                    </tr>
+                                `;
+                            }).join('')}
+                        </tbody>
+                        <tfoot>
+                            <tr>
+                                <td colspan="3" class="text-end"><strong>Sous-total:</strong></td>
+                                <td class="text-end">${formatCurrency(invoice.subtotal)}</td>
+                            </tr>
+                            <tr>
+                                <td colspan="3" class="text-end"><strong>TVA (${companyInfo.vatRate}%):</strong></td>
+                                <td class="text-end">${formatCurrency(invoice.vat)}</td>
+                            </tr>
+                            <tr>
+                                <td colspan="3" class="text-end"><strong>Total:</strong></td>
+                                <td class="text-end"><strong>${formatCurrency(invoice.total)}</strong></td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                    
+                    ${invoice.notes ? `<div class="mt-4"><h5>Notes:</h5><p>${invoice.notes}</p></div>` : ''}
+                    
+                    <div class="mt-4 text-center">
+                        <p class="mb-0">Merci pour votre confiance!</p>
+                        <p class="mb-0">Paiement dû avant le ${formatDate(invoice.dueDate)}</p>
+                    </div>
+                </div>
+            `;
+            
+            const modal = new bootstrap.Modal(document.getElementById('invoicePreviewModal'));
+            modal.show();
+        }
+
+        function markAsPaid(invoiceId) {
+            const invoice = invoices.find(inv => inv.id === invoiceId);
+            if (invoice) {
+                invoice.status = 'paid';
+                localStorage.setItem('invoices', JSON.stringify(invoices));
+                updateDashboard();
+                updateInvoicesTable();
+                updateRecentInvoices();
+                
+                showToast('Succès', 'La facture #' + invoice.number + ' a été marquée comme payée.', 'success');
+            }
+        }
+
+        function deleteInvoice(invoiceId) {
+            if (confirm('Êtes-vous sûr de vouloir supprimer cette facture?')) {
+                invoices = invoices.filter(inv => inv.id !== invoiceId);
+                localStorage.setItem('invoices', JSON.stringify(invoices));
+                updateDashboard();
+                updateInvoicesTable();
+                updateRecentInvoices();
+            }
+        }
+
+        async function downloadPDF() {
+            try {
+                const element = document.getElementById('invoiceToPrint');
+                const canvas = await html2canvas(element, {
+                    scale: 2,
+                    useCORS: true,
+                    logging: false
+                });
+                
+                const imgData = canvas.toDataURL('image/png');
+                const pdf = new jspdf.jsPDF({
+                    orientation: 'portrait',
+                    unit: 'mm',
+                    format: 'a4'
+                });
+                
+                const imgWidth = 210;
+                const pageHeight = 295;
+                const imgHeight = canvas.height * imgWidth / canvas.width;
+                let heightLeft = imgHeight;
+                
+                let position = 0;
+                
+                pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+                heightLeft -= pageHeight;
+                
+                while (heightLeft >= 0) {
+                    position = heightLeft - imgHeight;
+                    pdf.addPage();
+                    pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+                    heightLeft -= pageHeight;
+                }
+                
+                pdf.save('facture-' + new Date().getTime() + '.pdf');
+                
+                showToast('Succès', 'PDF téléchargé avec succès!', 'success');
+            } catch (error) {
+                console.error('Erreur lors de la génération du PDF:', error);
+                showToast('Erreur', 'Une erreur est survenue lors de la génération du PDF.', 'danger');
+            }
+        }
+
+        function sendInvoice() {
+            showToast('Succès', 'La facture a été envoyée par email!', 'success');
+        }
+
+        // Client Functions
+        function openNewClientModal() {
+            document.getElementById('newClientForm').reset();
+            const modal = new bootstrap.Modal(document.getElementById('newClientModal'));
+            modal.show();
+        }
+
+        function saveClient() {
+            const name = document.getElementById('clientName').value;
+            const email = document.getElementById('clientEmail').value;
+            const phone = document.getElementById('clientPhone').value;
+            const address = document.getElementById('clientAddress').value;
+            
+            if (!name || !email) {
+                alert('Veuillez remplir le nom et l\'email');
+                return;
+            }
+            
+            const client = {
+                id: Date.now(),
+                name: name,
+                email: email,
+                phone: phone,
+                address: address
+            };
+            
+            clients.push(client);
+            localStorage.setItem('clients', JSON.stringify(clients));
+            
+            // Close modal
+            bootstrap.Modal.getInstance(document.getElementById('newClientModal')).hide();
+            
+            // Update displays
+            updateClientsTable();
+            updateDashboard();
+            
+            showToast('Succès', 'Client ajouté avec succès!', 'success');
+        }
+
+        function updateClientsTable() {
+            const tbody = document.getElementById('clientsTableBody');
+            
+            if (clients.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6" class="text-center py-4">Aucun client</td></tr>';
+                return;
+            }
+            
+            tbody.innerHTML = clients.map(client => {
+                const clientInvoices = invoices.filter(inv => inv.clientId === client.id);
+                return `
+                    <tr>
+                        <td><strong>${client.name}</strong></td>
+                        <td>${client.email}</td>
+                        <td>${client.phone || '-'}</td>
+                        <td>${client.address || '-'}</td>
+                        <td>${clientInvoices.length}</td>
+                        <td>
+                            <div class="btn-group btn-group-sm">
+                                <button class="btn btn-outline-primary" onclick="editClient(${client.id})" title="Modifier">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                                <button class="btn btn-outline-danger" onclick="deleteClient(${client.id})" title="Supprimer">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        function editClient(clientId) {
+            const client = clients.find(c => c.id === clientId);
+            if (client) {
+                document.getElementById('clientName').value = client.name;
+                document.getElementById('clientEmail').value = client.email;
+                document.getElementById('clientPhone').value = client.phone || '';
+                document.getElementById('clientAddress').value = client.address || '';
+                
+                // Change save button to update
+                const saveBtn = document.querySelector('#newClientModal .btn-primary');
+                saveBtn.textContent = 'Mettre à jour';
+                saveBtn.onclick = () => updateClient(clientId);
+                
+                const modal = new bootstrap.Modal(document.getElementById('newClientModal'));
+                modal.show();
+            }
+        }
+
+        function updateClient(clientId) {
+            const name = document.getElementById('clientName').value;
+            const email = document.getElementById('clientEmail').value;
+            const phone = document.getElementById('clientPhone').value;
+            const address = document.getElementById('clientAddress').value;
+            
+            const clientIndex = clients.findIndex(c => c.id === clientId);
+            if (clientIndex !== -1) {
+                clients[clientIndex] = {
+                    id: clientId,
+                    name: name,
+                    email: email,
+                    phone: phone,
+                    address: address
+                };
+                
+                localStorage.setItem('clients', JSON.stringify(clients));
+                
+                // Close modal
+                bootstrap.Modal.getInstance(document.getElementById('newClientModal')).hide();
+                
+                // Update displays
+                updateClientsTable();
+                
+                // Reset save button
+                const saveBtn = document.querySelector('#newClientModal .btn-primary');
+                saveBtn.textContent = 'Enregistrer';
+                saveBtn.onclick = saveClient;
+                
+                showToast('Succès', 'Client mis à jour avec succès!', 'success');
+            }
+        }
+
+        function deleteClient(clientId) {
+            if (confirm('Êtes-vous sûr de vouloir supprimer ce client?')) {
+                clients = clients.filter(c => c.id !== clientId);
+                localStorage.setItem('clients', JSON.stringify(clients));
+                updateClientsTable();
+                updateDashboard();
+            }
+        }
+
+        // Product Functions
+        function openNewProductModal() {
+            document.getElementById('newProductForm').reset();
+            const modal = new bootstrap.Modal(document.getElementById('newProductModal'));
+            modal.show();
+        }
+
+        function saveProduct() {
+            const name = document.getElementById('productName').value;
+            const description = document.getElementById('productDescription').value;
+            const price = parseFloat(document.getElementById('productPrice').value);
+            const vat = parseFloat(document.getElementById('productVat').value) || companyInfo.vatRate;
+            
+            if (!name || !price) {
+                alert('Veuillez remplir le nom et le prix');
+                return;
+            }
+            
+            const product = {
+                id: Date.now(),
+                name: name,
+                description: description,
+                price: price,
+                vat: vat
+            };
+            
+            products.push(product);
+            localStorage.setItem('products', JSON.stringify(products));
+            
+            // Close modal
+            bootstrap.Modal.getInstance(document.getElementById('newProductModal')).hide();
+            
+            // Update displays
+            updateProductsTable();
+            
+            showToast('Succès', 'Produit ajouté avec succès!', 'success');
+        }
+
+        function updateProductsTable() {
+            const tbody = document.getElementById('productsTableBody');
+            
+            if (products.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="5" class="text-center py-4">Aucun produit</td></tr>';
+                return;
+            }
+            
+            tbody.innerHTML = products.map(product => `
+                <tr>
+                    <td><strong>${product.name}</strong></td>
+                    <td>${product.description || '-'}</td>
+                    <td class="currency-display">${formatCurrency(product.price)}</td>
+                    <td>${product.vat}%</td>
+                    <td>
+                        <div class="btn-group btn-group-sm">
+                            <button class="btn btn-outline-primary" onclick="editProduct(${product.id})" title="Modifier">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            <button class="btn btn-outline-danger" onclick="deleteProduct(${product.id})" title="Supprimer">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        function editProduct(productId) {
+            const product = products.find(p => p.id === productId);
+            if (product) {
+                document.getElementById('productName').value = product.name;
+                document.getElementById('productDescription').value = product.description || '';
+                document.getElementById('productPrice').value = product.price;
+                document.getElementById('productVat').value = product.vat;
+                
+                // Change save button to update
+                const saveBtn = document.querySelector('#newProductModal .btn-primary');
+                saveBtn.textContent = 'Mettre à jour';
+                saveBtn.onclick = () => updateProduct(productId);
+                
+                const modal = new bootstrap.Modal(document.getElementById('newProductModal'));
+                modal.show();
+            }
+        }
+
+        function updateProduct(productId) {
+            const name = document.getElementById('productName').value;
+            const description = document.getElementById('productDescription').value;
+            const price = parseFloat(document.getElementById('productPrice').value);
+            const vat = parseFloat(document.getElementById('productVat').value) || companyInfo.vatRate;
+            
+            const productIndex = products.findIndex(p => p.id === productId);
+            if (productIndex !== -1) {
+                products[productIndex] = {
+                    id: productId,
+                    name: name,
+                    description: description,
+                    price: price,
+                    vat: vat
+                };
+                
+                localStorage.setItem('products', JSON.stringify(products));
+                
+                // Close modal
+                bootstrap.Modal.getInstance(document.getElementById('newProductModal')).hide();
+                
+                // Update displays
+                updateProductsTable();
+                
+                // Reset save button
+                const saveBtn = document.querySelector('#newProductModal .btn-primary');
+                saveBtn.textContent = 'Enregistrer';
+                saveBtn.onclick = saveProduct;
+                
+                showToast('Succès', 'Produit mis à jour avec succès!', 'success');
+            }
+        }
+
+        function deleteProduct(productId) {
+            if (confirm('Êtes-vous sûr de vouloir supprimer ce produit?')) {
+                products = products.filter(p => p.id !== productId);
+                localStorage.setItem('products', JSON.stringify(products));
+                updateProductsTable();
+            }
+        }
+
+        // User Functions
+        function openNewUserModal() {
+            document.getElementById('newUserForm').reset();
+            const modal = new bootstrap.Modal(document.getElementById('newUserModal'));
+            modal.show();
+        }
+
+        function saveUser() {
+            const name = document.getElementById('userName').value;
+            const code = document.getElementById('userCode').value;
+            const role = document.getElementById('userRole').value;
+            
+            if (!name || !code) {
+                alert('Veuillez remplir le nom et le code d\'accès');
+                return;
+            }
+            
+            const user = {
+                id: Date.now(),
+                name: name,
+                code: code,
+                role: role,
+                createdAt: new Date().toISOString()
+            };
+            
+            users.push(user);
+            localStorage.setItem('users', JSON.stringify(users));
+            
+            // Close modal
+            bootstrap.Modal.getInstance(document.getElementById('newUserModal')).hide();
+            
+            // Update displays
+            updateUsersTable();
+            
+            showToast('Succès', 'Utilisateur ajouté avec succès!', 'success');
+        }
+
+        function updateUsersTable() {
+            const tbody = document.getElementById('usersTableBody');
+            
+            if (users.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="5" class="text-center py-4">Aucun utilisateur</td></tr>';
+                return;
+            }
+            
+            tbody.innerHTML = users.map(user => `
+                <tr>
+                    <td><strong>${user.name}</strong></td>
+                    <td>••••${user.code.slice(-2)}</td>
+                    <td><span class="badge bg-${user.role === 'admin' ? 'danger' : user.role === 'user' ? 'primary' : 'secondary'}">${getRoleText(user.role)}</span></td>
+                    <td>${formatDate(user.createdAt)}</td>
+                    <td>
+                        <div class="btn-group btn-group-sm">
+                            <button class="btn btn-outline-primary" onclick="editUser(${user.id})" title="Modifier">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            <button class="btn btn-outline-danger" onclick="deleteUser(${user.id})" title="Supprimer">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        function editUser(userId) {
+            const user = users.find(u => u.id === userId);
+            if (user) {
+                document.getElementById('userName').value = user.name;
+                document.getElementById('userCode').value = user.code;
+                document.getElementById('userRole').value = user.role;
+                
+                // Change save button to update
+                const saveBtn = document.querySelector('#newUserModal .btn-primary');
+                saveBtn.textContent = 'Mettre à jour';
+                saveBtn.onclick = () => updateUser(userId);
+                
+                const modal = new bootstrap.Modal(document.getElementById('newUserModal'));
+                modal.show();
+            }
+        }
+
+        function updateUser(userId) {
+            const name = document.getElementById('userName').value;
+            const code = document.getElementById('userCode').value;
+            const role = document.getElementById('userRole').value;
+            
+            const userIndex = users.findIndex(u => u.id === userId);
+            if (userIndex !== -1) {
+                users[userIndex] = {
+                    id: userId,
+                    name: name,
+                    code: code,
+                    role: role,
+                    createdAt: users[userIndex].createdAt
+                };
+                
+                localStorage.setItem('users', JSON.stringify(users));
+                
+                // Close modal
+                bootstrap.Modal.getInstance(document.getElementById('newUserModal')).hide();
+                
+                // Update displays
+                updateUsersTable();
+                
+                // Reset save button
+                const saveBtn = document.querySelector('#newUserModal .btn-primary');
+                saveBtn.textContent = 'Enregistrer';
+                saveBtn.onclick = saveUser;
+                
+                showToast('Succès', 'Utilisateur mis à jour avec succès!', 'success');
+            }
+        }
+
+        function deleteUser(userId) {
+            if (confirm('Êtes-vous sûr de vouloir supprimer cet utilisateur?')) {
+                users = users.filter(u => u.id !== userId);
+                localStorage.setItem('users', JSON.stringify(users));
+                updateUsersTable();
+            }
+        }
+
+        // Utility Functions
+        function getClientName(clientId) {
+            const client = clients.find(c => c.id === clientId);
+            return client ? client.name : 'Client inconnu';
+        }
+
+        function formatDate(dateString) {
+            const date = new Date(dateString);
+            return date.toLocaleDateString('fr-FR');
+        }
+
+        function getStatusText(status) {
+            const statusMap = {
+                'paid': 'Payée',
+                'pending': 'En attente',
+                'overdue': 'En retard'
+            };
+            return statusMap[status] || status;
+        }
+
+        function getRoleText(role) {
+            const roleMap = {
+                'admin': 'Administrateur',
+                'user': 'Utilisateur',
+                'viewer': 'Consultant'
+            };
+            return roleMap[role] || role;
+        }
+
+        function formatCurrency(amount) {
+            const currency = companyInfo.currency || 'DZD';
+            const options = {
+                style: 'currency',
+                currency: currency,
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2
+            };
+            
+            try {
+                return new Intl.NumberFormat('fr-' + (currency === 'DZD' ? 'DZ' : 'FR'), options).format(amount);
+            } catch (e) {
+                // Fallback for unsupported currencies
+                return amount.toFixed(2) + ' ' + currency;
+            }
+        }
+
+        function showToast(title, message, type = 'info') {
+            const toast = document.createElement('div');
+            toast.className = 'position-fixed bottom-0 end-0 p-3';
+            toast.style.zIndex = '1050';
+            toast.innerHTML = `
+                <div class="toast show" role="alert">
+                    <div class="toast-header">
+                        <strong class="me-auto">${title}</strong>
+                        <button type="button" class="btn-close" data-bs-dismiss="toast"></button>
+                    </div>
+                    <div class="toast-body">
+                        ${message}
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(toast);
+            setTimeout(() => toast.remove(), 3000);
+        }
+
+        // Settings Form Handlers
+        document.getElementById('companySettingsForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            companyInfo = {
+                name: document.getElementById('companyName').value,
+                address: document.getElementById('companyAddress').value,
+                rc: document.getElementById('companyRC').value,
+                email: document.getElementById('companyEmail').value,
+                phone: document.getElementById('companyPhone').value,
+                currency: companyInfo.currency,
+                vatRate: companyInfo.vatRate
+            };
+            
+            localStorage.setItem('companyInfo', JSON.stringify(companyInfo));
+            
+            showToast('Succès', 'Les informations de l\'entreprise ont été enregistrées.', 'success');
+        });
+
+        document.getElementById('invoiceSettingsForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            companyInfo.currency = document.getElementById('currency').value;
+            companyInfo.vatRate = parseFloat(document.getElementById('defaultVat').value) || 19;
+            
+            localStorage.setItem('companyInfo', JSON.stringify(companyInfo));
+            
+            // Update VAT rate display
+            document.getElementById('vatRate').textContent = companyInfo.vatRate;
+            
+            showToast('Succès', 'Les préférences de facturation ont été enregistrées.', 'success');
+        });
+    </script>
+</body>
+</html>
